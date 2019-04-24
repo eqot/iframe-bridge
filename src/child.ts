@@ -1,4 +1,7 @@
 import IframeBridge from './iframeBridge'
 
 const bridge = new IframeBridge(window.parent, '*')
-bridge.sendMessage('sent!')
+bridge.makeMirror('navigator.bluetooth')
+
+// bridge.sendMessage('sent!')
+// bridge.sendCommand('makeMirror', 'navigator.bluetooth')

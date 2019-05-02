@@ -1,9 +1,8 @@
 import IframeBridge from './iframeBridge'
 
 document.querySelector('#action').addEventListener('click', () => {
-  const bridge = new IframeBridge(window.parent, '*')
-  bridge.makeMirror('navigator.bluetooth')
+  const bridge = new IframeBridge(window.parent)
+  bridge.makeMirror('navigator.bluetooth', () => {
+    bridge.requestDevice('foo', 'bar')
+  })
 })
-
-// bridge.sendMessage('sent!')
-// bridge.sendCommand('makeMirror', 'navigator.bluetooth')

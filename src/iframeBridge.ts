@@ -1,18 +1,23 @@
-export default class IFrameBridge {
-  target: any
-  origin: string
+export default class IframeBridge {
+  targetWindow: Window
+  onReadyListener: () => void
 
-  constructor(target, origin) {
-    this.target = target
-    this.origin = origin
+  constructor(targetWindow?: any) {
+    this.targetWindow = targetWindow
+
+    this.setCommandHandler()
   }
 
   public sendMessage(message: string) {
-    this.target.postMessage(message, this.origin)
+    this.targetWindow.postMessage(message, '*')
   }
 
   public receiveMessage(listener: any) {
-    this.target.addEventListener('message', (message: any) => {
+    window.addEventListener('message', (message: any) => {
+      if (!this.targetWindow) {
+        this.targetWindow = message.source
+      }
+
       listener(message.data)
     })
   }
@@ -29,20 +34,24 @@ export default class IFrameBridge {
     })
   }
 
-  public setCommandHandler() {
+  private setCommandHandler() {
     this.receiveCommand((command, args) => {
       switch (command) {
-        case 'makeMirror':
-          return this.makeMirrorCallee.apply(this, args)
+        case 'makeMirrorForCallee':
+          return this.makeMirrorForCallee.apply(this, args)
+
+        case 'makeMirrorForCaller':
+          return this.makeMirrorForCaller.apply(this, args)
       }
     })
   }
 
-  public makeMirror(instance: string) {
-    this.sendCommand('makeMirror', instance)
+  public makeMirror(instance: string, onReadyListener: () => void) {
+    this.onReadyListener = onReadyListener
+    this.sendCommand('makeMirrorForCallee', instance)
   }
 
-  private makeMirrorCallee(instance: string) {
+  private makeMirrorForCallee(instance: string) {
     const [rootKey, ...keys] = instance.split('.')
 
     let rootObject = null
@@ -70,7 +79,19 @@ export default class IFrameBridge {
         values.push(key)
       }
     }
-    console.log(functions)
-    console.log(values)
+
+    this.sendCommand('makeMirrorForCaller', { functions, values })
+  }
+
+  private makeMirrorForCaller(attributes: any) {
+    attributes.functions.forEach((functionName: string) => {
+      IframeBridge.prototype[functionName] = function(...args: any) {
+        console.log(`${functionName}() is called with ${args}`)
+      }
+    })
+
+    if (this.onReadyListener) {
+      this.onReadyListener()
+    }
   }
 }

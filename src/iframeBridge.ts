@@ -1,5 +1,6 @@
 export default class IframeBridge {
   targetWindow: Window
+  targetObject: any
   onReadyListener: () => void
 
   constructor(targetWindow?: any) {
@@ -42,6 +43,9 @@ export default class IframeBridge {
 
         case 'makeMirrorForCaller':
           return this.makeMirrorForCaller.apply(this, args)
+
+        case 'invoke':
+          return this.invoke.apply(this, args)
       }
     })
   }
@@ -68,12 +72,12 @@ export default class IframeBridge {
       return
     }
 
-    const object = rootObject[keys.join('.')]
+    this.targetObject = rootObject[keys.join('.')]
 
     const functions = []
     const values = []
-    for (const key in object) {
-      if (typeof object[key] === 'function') {
+    for (const key in this.targetObject) {
+      if (typeof this.targetObject[key] === 'function') {
         functions.push(key)
       } else {
         values.push(key)
@@ -83,12 +87,22 @@ export default class IframeBridge {
     this.sendCommand('makeMirrorForCaller', { functions, values })
   }
 
+  private invoke(params: { functionName: string; args: any }) {
+    if (!this.targetObject) {
+      return
+    }
+
+    this.targetObject[params.functionName].apply(this.targetObject, params.args)
+  }
+
   private makeMirrorForCaller(attributes: any) {
-    attributes.functions.forEach((functionName: string) => {
-      IframeBridge.prototype[functionName] = function(...args: any) {
+    for (const functionName of attributes.functions) {
+      IframeBridge.prototype[functionName] = (...args: any) => {
         console.log(`${functionName}() is called with ${args}`)
+
+        this.sendCommand('invoke', { functionName, args })
       }
-    })
+    }
 
     if (this.onReadyListener) {
       this.onReadyListener()

@@ -98,7 +98,7 @@ export default class IframeBridge {
   private makeMirrorForCaller(attributes: any) {
     for (const functionName of attributes.functions) {
       IframeBridge.prototype[functionName] = (...args: any) => {
-        console.log(`${functionName}() is called with ${args}`)
+        // console.log(`${functionName}() is called with ${args}`)
 
         this.sendCommand('invoke', { functionName, args })
       }
